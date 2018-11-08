@@ -108,6 +108,7 @@ def run(duk):
                 S_tout += 1
             pfdata.write(str(idx) + (':PASS:' if result == expected else ':FAIL:') + test + '\n')
     print("%d tests were skipped\n%d tests are timeouted" % (S_skip, S_tout))
+    title('Processing chains')
     sh.move('tracer.chains', dukname + '.chains')
     sp.call([CtG, '-m', '-g', '-c', dukname + '.chains'])
     sp.call([EtM, duk, dukname + '.dynamic.map'])
@@ -119,7 +120,7 @@ def run(duk):
 jsregex = re.compile(r'^(.*)\.js$')
 
 try:
-    #make('duk-traced')
+    make('duk-traced')
     run('./duk-traced')
 except Exception as e:
     print(str(e))
