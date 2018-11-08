@@ -5,6 +5,8 @@
 
 DUKTAPE_SOURCES = src/duktape.c
 
+TRACER_SOURCES = tracer.c
+
 CMDLINE_SOURCES = \
 	examples/cmdline/duk_cmdline.c
 
@@ -39,8 +41,8 @@ CMDLINE_SOURCES += extras/module-duktape/duk_module_duktape.c
 # http://duktape.org/guide.html#compiling
 # http://wiki.duktape.org/Configuring.html
 
-duk: $(DUKTAPE_SOURCES) $(CMDLINE_SOURCES)
-	$(CC) -o $@ $(DEFINES) $(CCOPTS) $(DUKTAPE_SOURCES) $(CMDLINE_SOURCES) $(CCLIBS)
+duk: $(DUKTAPE_SOURCES) $(TRACER_SOURCES) $(CMDLINE_SOURCES)
+	$(CC) -o $@ $(DEFINES) $(CCOPTS) $(DUKTAPE_SOURCES) $(TRACER_SOURCES) $(CMDLINE_SOURCES) $(CCLIBS)
 
 linenoise/linenoise.c: linenoise
 linenoise:
