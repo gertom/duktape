@@ -32,6 +32,7 @@ def need(prg):
 MAX_VIRTUAL_MEMORY = 2 * 1024 * 1024 * 1024 # 2GB
 NORMAL_TIMEOUT = 30
 SLOW_TIMEOUT = 4 * NORMAL_TIMEOUT
+KILL_TIMEOUT = 5
 
 def limit_memory():
     resource.setrlimit(resource.RLIMIT_AS, (MAX_VIRTUAL_MEMORY, resource.RLIM_INFINITY))
@@ -101,16 +102,21 @@ def run(duk):
             try:
                 result = proc.communicate(timeout=(SLOW_TIMEOUT if pex_slow.search(params) else NORMAL_TIMEOUT))[0]
             except sp.TimeoutExpired:
-                proc.kill()
-                proc.communicate()
+                proc.terminate()
+                proc.communicate(timeout=KILL_TIMEOUT)
+                if proc.poll() == None:
+                    proc.kill()
+                    proc.communicate()
+                    print("Timeout, KILL TC%d: %s" % (idx, test))
+                else:
+                    print("Timeout, TERM TC%d: %s" % (idx, test))
                 result = None
-                print("Timeout at TC%d: %s" % (idx, test))
                 S_tout += 1
             pfdata.write(str(idx) + (':PASS:' if result == expected else ':FAIL:') + test + '\n')
     print("%d tests were skipped\n%d tests are timeouted" % (S_skip, S_tout))
     title('Processing chains')
     sh.move('tracer.chains', dukname + '.chains')
-    sp.call([CtG, '-m', '-g', '-c', dukname + '.chains'])
+    sp.call([CtG, '-m', '-g', dukname + '.chains'])
     sp.call([EtM, duk, dukname + '.dynamic.map'])
     sp.call([CGF, dukname + '.chains.all.graph.json', dukname + '.dynamic.graphml', '-m',  dukname + '.dynamic.map'])
     sp.call(['gzip', dukname + '.chains'])
