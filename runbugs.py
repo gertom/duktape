@@ -32,7 +32,7 @@ def need(prg):
 MAX_VIRTUAL_MEMORY = 2 * 1024 * 1024 * 1024 # 2GB
 NORMAL_TIMEOUT = 30
 SLOW_TIMEOUT = 4 * NORMAL_TIMEOUT
-KILL_TIMEOUT = 5
+KILL_TIMEOUT = 120
 
 def limit_memory():
     resource.setrlimit(resource.RLIMIT_AS, (MAX_VIRTUAL_MEMORY, resource.RLIM_INFINITY))
