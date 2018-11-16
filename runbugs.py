@@ -65,6 +65,8 @@ def run(duk):
     pex_skip    = re.compile(r'"skip"\s*:\s*true')
     pex_slow    = re.compile(r'"slow"\s*:\s*true')
     S_tout = 0
+    S_term = 0
+    S_kill = 0
     S_skip = 0
     EtM='../elf-to-map.py'
     CtG='../chain-to-graph.py'
@@ -108,12 +110,14 @@ def run(duk):
                     proc.kill()
                     proc.communicate()
                     print("Timeout, KILL TC%d: %s" % (idx, test))
+                    S_kill += 1
                 else:
                     print("Timeout, TERM TC%d: %s" % (idx, test))
+                    S_term += 1
                 result = None
                 S_tout += 1
             pfdata.write(str(idx) + (':PASS:' if result == expected else ':FAIL:') + test + '\n')
-    print("%d tests were skipped\n%d tests are timeouted" % (S_skip, S_tout))
+    print("%d tests were skipped\n%d tests are timeouted\n\t%d TERMinated\n\t%d KILLed" % (S_skip, S_tout, S_term, S_kill))
     title('Processing chains')
     sh.move('tracer.chains', dukname + '.chains')
     sp.call([CtG, '-m', '-g', dukname + '.chains'])
