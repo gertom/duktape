@@ -38,8 +38,17 @@
 #endif
 
 #define DEFAULT_CAPACITY_UNIT 16
-#define OUTPUT_FILE_NAME "tracer.chains"
+#ifdef TRACER_BINARY_CHAINS
+#define OUTPUT_FILE_NAME    "tracer.bchains"
+#define CHAIN_ITEM_TYPE     unsigned int
+#define CHAIN_END_CHAIN     0ll
+#define CHAIN_START_PROGRAM 1ll
+#define CHAIN_QUIT_PROGRAM  2ll
+#else
+#define OUTPUT_FILE_NAME     "tracer.chains"
 #define CHAIN_ITEM_SEPARATOR "-->"
+#define CHAIN_END_CHAIN      "\n"
+#endif
 
 #define INTENTIONALLY_UNUSED(X) (void)(X);
 
@@ -84,7 +93,11 @@ typedef struct __cyg_profile_trace_type {
 
 static __cyg_profile_trace_type __cyg_profile_trace;
 static FILE  *__cyg_profile_tracer_fp = NULL;
+#ifdef TRACER_BINARY_CHAINS
+static CHAIN_ITEM_TYPE *__cyg_profile_tracer_chain_buffer = NULL;
+#else
 static void **__cyg_profile_tracer_chain_buffer = NULL;
+#endif
 static volatile int __cyg_profile_atomic_operation = FALSE;
 static volatile int __cyg_profile_signal_occurred = FALSE;
 
@@ -171,14 +184,22 @@ __cyg_profile_trace_node_type *__cyg_profile_trace_node_add(__cyg_profile_trace_
 }
 
 void __cyg_profile_trace_node_collect(__cyg_profile_trace_node_type *node, int depth) {
+#ifdef TRACER_BINARY_CHAINS
+	__cyg_profile_tracer_chain_buffer[depth++] = (CHAIN_ITEM_TYPE) ((unsigned long int) (node->address));
+	if (node->final) {
+		__cyg_profile_tracer_chain_buffer[depth] = CHAIN_END_CHAIN;
+		fwrite(__cyg_profile_tracer_chain_buffer + 1, sizeof(CHAIN_ITEM_TYPE), depth, __cyg_profile_tracer_fp);
+	}
+#else
 	__cyg_profile_tracer_chain_buffer[depth++] = node->address;
 	if (node->final) {
 		fprintf(__cyg_profile_tracer_fp, "%p", __cyg_profile_tracer_chain_buffer[1]);
 		for (int i = 2; i < depth; ++i) {
 			fprintf(__cyg_profile_tracer_fp, CHAIN_ITEM_SEPARATOR "%p", __cyg_profile_tracer_chain_buffer[i]);
 		}
-		fprintf(__cyg_profile_tracer_fp, "\n");
+		fprintf(__cyg_profile_tracer_fp, CHAIN_END_CHAIN);
 	}
+#endif
 	for (size_t i = 0; i < node->count; ++i) {
 		__cyg_profile_trace_node_collect(node->children[i], depth);
 	}
@@ -267,9 +288,25 @@ void __cyg_profile_trace_end(void) {
 	if (__cyg_profile_trace.current != __cyg_profile_trace.root) {
 		__cyg_profile_trace.current->final = TRUE;
 	}
+#ifdef TRACER_BINARY_CHAINS
+	__cyg_profile_tracer_chain_buffer = malloc((__cyg_profile_trace.max_depth + 1) * sizeof(CHAIN_ITEM_TYPE));
+	if (__cyg_profile_tracer_chain_buffer) {
+		__cyg_profile_tracer_fp = fopen(OUTPUT_FILE_NAME, "ab");
+		if (__cyg_profile_tracer_fp) {
+			CHAIN_ITEM_TYPE startstop;
+			startstop = CHAIN_START_PROGRAM;
+			fwrite(&startstop, sizeof(startstop), 1, __cyg_profile_tracer_fp);
+			__cyg_profile_trace_node_collect(__cyg_profile_trace.root, 0);
+			startstop = CHAIN_QUIT_PROGRAM;
+			fwrite(&startstop, sizeof(startstop), 1, __cyg_profile_tracer_fp);
+			fclose(__cyg_profile_tracer_fp);
+		}
+		free(__cyg_profile_tracer_chain_buffer);
+	}
+#else
 	__cyg_profile_tracer_chain_buffer = malloc(__cyg_profile_trace.max_depth * sizeof(void*));
 	if (__cyg_profile_tracer_chain_buffer) {
-		__cyg_profile_tracer_fp = fopen(OUTPUT_FILE_NAME, "a");
+		__cyg_profile_tracer_fp = fopen(OUTPUT_FILE_NAME, "at");
 		if (__cyg_profile_tracer_fp) {
 			fprintf(__cyg_profile_tracer_fp, "## START PROGRAM\n");
 			__cyg_profile_trace_node_collect(__cyg_profile_trace.root, 0);
@@ -278,6 +315,7 @@ void __cyg_profile_trace_end(void) {
 		}
 		free(__cyg_profile_tracer_chain_buffer);
 	}
+#endif
 #ifdef __linux__
 	signal(SIGTERM, SIG_DFL);
 #endif

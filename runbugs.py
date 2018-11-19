@@ -75,8 +75,8 @@ def run(duk):
     need(CtG)
     need(CGF)
     need(duk)
-    if os.path.exists('tracer.chains'):
-        os.remove('tracer.chains')
+    if os.path.exists('tracer.bchains'):
+        os.remove('tracer.bchains')
     dukname = os.path.basename(duk)
     idx = 0
     with open(dukname + '-passfail.data', 'w') as pfdata:
@@ -119,7 +119,7 @@ def run(duk):
             pfdata.write(str(idx) + (':PASS:' if result == expected else ':FAIL:') + test + '\n')
     print("%d tests were skipped\n%d tests are timeouted\n\t%d TERMinated\n\t%d KILLed" % (S_skip, S_tout, S_term, S_kill))
     title('Processing chains')
-    sh.move('tracer.chains', dukname + '.chains')
+    sh.move('tracer.bchains', dukname + '.bchains')
     sp.call([CtG, '-m', '-g', dukname + '.chains'])
     sp.call([EtM, duk, dukname + '.dynamic.map'])
     sp.call([CGF, dukname + '.chains.all.graph.json', dukname + '.dynamic.graphml', '-m',  dukname + '.dynamic.map'])
